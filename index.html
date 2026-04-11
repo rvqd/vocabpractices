@@ -1,3 +1,4 @@
+<!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
@@ -5,29 +6,84 @@
     <title>Join Exact Roblox Server</title>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap');
-        body { font-family: 'Inter', sans-serif; background: #0f0f0f; color: white; text-align: center; padding: 60px 20px; margin: 0; }
-        h1 { color: #a0c19d; font-size: 2.6em; }
-        .info { background: #1f1f1f; padding: 20px; border-radius: 12px; display: inline-block; margin: 20px 0; }
-        button { background: #a0c19d; color: #111; font-size: 1.4em; padding: 16px 40px; border: none; border-radius: 12px; cursor: pointer; margin: 10px; transition: 0.2s; }
-        button:hover { background: #8fb38c; transform: scale(1.05); }
-        .console { background: #222; padding: 15px; border-radius: 8px; text-align: left; font-family: monospace; margin: 20px auto; max-width: 600px; white-space: pre-wrap; }
-        .warning { color: #ffcc00; margin-top: 30px; }
+        body { 
+            font-family: 'Inter', sans-serif; 
+            background: #0f0f0f; 
+            color: white; 
+            text-align: center; 
+            padding: 60px 20px; 
+            margin: 0; 
+        }
+        h1 { color: #a0c19d; font-size: 2.5em; margin-bottom: 10px; }
+        .subtitle { color: #888; font-size: 1.1em; margin-bottom: 40px; }
+        .info { 
+            background: #1f1f1f; 
+            padding: 20px; 
+            border-radius: 12px; 
+            display: inline-block; 
+            margin: 20px 0; 
+            font-size: 1.15em;
+        }
+        .steps { 
+            background: #1a1a1a; 
+            padding: 25px; 
+            border-radius: 12px; 
+            max-width: 620px; 
+            margin: 30px auto; 
+            text-align: left; 
+            font-size: 1.05em;
+            line-height: 1.6;
+        }
+        .code { 
+            background: #222; 
+            padding: 16px; 
+            border-radius: 8px; 
+            font-family: monospace; 
+            font-size: 1.05em; 
+            text-align: left; 
+            margin: 15px 0; 
+            white-space: pre-wrap;
+            word-break: break-all;
+        }
+        button { 
+            background: #a0c19d; 
+            color: #111; 
+            font-size: 1.4em; 
+            padding: 16px 50px; 
+            border: none; 
+            border-radius: 12px; 
+            cursor: pointer; 
+            margin-top: 20px; 
+            transition: 0.2s; 
+        }
+        button:hover { background: #8fb38c; transform: scale(1.04); }
+        .warning { color: #ffcc00; margin-top: 40px; }
     </style>
 </head>
 <body>
     <h1>🔗 JOIN EXACT SERVER</h1>
+    <p class="subtitle">Saints Corpse Part Detected</p>
+
     <div class="info">
         <p><strong>Place ID:</strong> <span id="place"></span></p>
         <p><strong>Job ID:</strong> <span id="job"></span></p>
     </div>
 
-    <button onclick="tryProtocol()">🚀 Launch Roblox Directly (Auto)</button>
-    <button onclick="openRobloxAndShowCommand()">🌐 Open Roblox.com + Show Console Command</button>
+    <div class="steps">
+        <strong>How to join the exact server:</strong><br><br>
+        1. Click the button below<br>
+        2. Roblox.com will open in a new tab<br>
+        3. Press <strong>F12</strong> (or Ctrl + Shift + I)<br>
+        4. Go to the <strong>Console</strong> tab<br>
+        5. Paste the code below and press Enter
+    </div>
 
-    <div id="consoleBox" class="console" style="display:none;"></div>
+    <button onclick="openRobloxAndCopyCommand()">🚀 Open Roblox & Show Join Code</button>
+
+    <div id="consoleBox" class="code" style="display:none;"></div>
 
     <p class="warning">
-        The Console Method is currently the most reliable for public servers from another account.
+        This is currently the most reliable way to join the exact public server in 2026.
     </p>
 
     <script>
@@ -38,23 +94,29 @@
         document.getElementById('place').textContent = placeId || 'N/A';
         document.getElementById('job').textContent = jobId || 'N/A';
 
-        function tryProtocol() {
-            if (!placeId || !jobId) return alert("Missing server info!");
-            window.location.href = `roblox://experiences/start?placeId=${placeId}&gameInstanceId=${jobId}`;
-        }
+        function openRobloxAndCopyCommand() {
+            if (!placeId || !jobId) {
+                alert("Missing Place ID or Job ID!");
+                return;
+            }
 
-        function openRobloxAndShowCommand() {
-            if (!placeId || !jobId) return alert("Missing server info!");
-            // Open Roblox home in new tab
+            // Open Roblox home page
             window.open('https://www.roblox.com/home', '_blank');
-            // Show command
+
+            // Show the exact copy-paste code
             const box = document.getElementById('consoleBox');
             box.style.display = 'block';
-            box.innerHTML = `// 1. Roblox.com should now be open in another tab\n// 2. Press F12 → go to Console tab\n// 3. Paste this line and press Enter:\nRoblox.GameLauncher.joinGameInstance(${placeId}, "${jobId}");`;
+            box.innerHTML = `Roblox.GameLauncher.joinGameInstance(${placeId}, "${jobId}");`;
         }
 
-        // Auto attempt protocol on load
-        window.onload = () => setTimeout(tryProtocol, 800);
+        // Optional: Auto open Roblox after 1 second (user can still click button)
+        window.onload = () => {
+            setTimeout(() => {
+                if (placeId && jobId) {
+                    openRobloxAndCopyCommand();
+                }
+            }, 1000);
+        };
     </script>
 </body>
 </html>
