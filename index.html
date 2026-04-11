@@ -110,13 +110,13 @@
 <div class="container">
     <ol>
         <li>Click the button below</li>
-        <li>Roblox.com will open in a new tab</li>
+        <li>Roblox.com will open in a new tab (manually if needed)</li>
         <li>Press <strong>F12</strong> (or Ctrl + Shift + I)</li>
         <li>Go to the <strong>Console</strong> tab</li>
         <li>The command is already copied — just paste and press Enter</li>
     </ol>
 
-    <button onclick="copyAndShowCommand()">Copy Join Command & Open Roblox</button>
+    <button onclick="copyAndShowCommand()">Copy Join Command</button>
 
     <div id="previewBox" class="preview"></div>
     <div id="copiedMsg" class="copied">✅ Command copied to clipboard!</div>
@@ -154,19 +154,7 @@
         }).catch(() => {
             alert("Failed to copy. Please copy manually:\n" + command);
         });
-
-        // Open Roblox in new tab
-        window.open('https://www.roblox.com/home', '_blank');
     }
-
-    // Optional: Auto-trigger after 800ms so the user doesn't even need to click
-    window.onload = () => {
-        setTimeout(() => {
-            if (placeId && jobId) {
-                copyAndShowCommand();
-            }
-        }, 800);
-    };
 </script>
 
 </body>
