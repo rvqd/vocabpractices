@@ -121,7 +121,7 @@
     <header>
       <div>
         <h1>AP Psych Vocab Match</h1>
-        <p class="sub">Match the definition to the correct term. Randomized every round.</p>
+        <p class="sub">Match each definition to the correct term in unit/topic order.</p>
       </div>
       <div class="pill" id="totalPill">0 words loaded</div>
     </header>
@@ -148,7 +148,7 @@
         </div>
         <input class="search" id="search" placeholder="Search words or definitions..." />
         <div class="list" id="list"></div>
-        <p class="tiny">Tip: press <b>1–4</b> to answer, <b>Enter</b> for next, and <b>S</b> to show the answer.</p>
+        <p class="tiny">Tip: terms now appear in chronological unit/topic order. Press <b>1–4</b> to answer, <b>Enter</b> for next, and <b>S</b> to show the answer.</p>
       </aside>
     </section>
   </main>
@@ -185,7 +185,7 @@
     }
 
     function startGame() {
-      deck = shuffle(VOCAB);
+      deck = [...VOCAB];
       index = 0;
       score = 0;
       missed = 0;
