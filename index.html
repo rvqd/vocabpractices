@@ -146,6 +146,7 @@
         <div class="feedback" id="feedback"></div>
         <div class="review hidden" id="review"></div>
         <div class="controls">
+          <button class="btn secondary" id="backBtn" disabled>Back</button>
           <button class="btn" id="nextBtn" disabled>Next</button>
           <button class="btn secondary" id="restartBtn">Restart / Clear Save</button>
         </div>
@@ -161,7 +162,7 @@
         <div class="progressbar"><div id="progressFill"></div></div>
         <input class="search" id="search" placeholder="Search words or definitions..." />
         <div class="list" id="list"></div>
-        <p class="tiny">Tip: terms appear in chronological unit/topic order. Perspective questions now use other perspective terms as answer choices. Press <b>1–4</b> to answer and <b>Enter</b> for next after you get it right. Your progress saves on this device automatically.</p>
+        <p class="tiny">Tip: terms appear in chronological unit/topic order. Perspective questions now use other perspective terms as answer choices. Press <b>1–4</b> to answer, <b>Enter</b> for next after you get it right, and <b>←</b> to go back. Your progress saves on this device automatically.</p>
       </aside>
     </section>
   </main>
@@ -183,6 +184,7 @@
 
     let deck = [];
     let index = 0;
+    let furthestIndex = 0;
     let current = null;
     let currentChoices = [];
     let score = 0;
@@ -191,6 +193,7 @@
     let answeredCorrectly = false;
     let missedThisQuestion = false;
     let wrongTermsThisQuestion = [];
+    let questionStates = {};
 
     const definitionEl = document.getElementById('definition');
     const choicesEl = document.getElementById('choices');
@@ -204,6 +207,7 @@
     const totalPill = document.getElementById('totalPill');
     const listEl = document.getElementById('list');
     const searchEl = document.getElementById('search');
+    const backBtn = document.getElementById('backBtn');
     const nextBtn = document.getElementById('nextBtn');
     const restartBtn = document.getElementById('restartBtn');
 
@@ -216,16 +220,25 @@
       return copy;
     }
 
+    function saveCurrentQuestionState() {
+      if (!deck.length || index < 0 || index >= deck.length || !current) return;
+      questionStates[index] = {
+        currentChoiceTerms: currentChoices.map(v => v.term),
+        answeredCorrectly,
+        missedThisQuestion,
+        wrongTermsThisQuestion: [...wrongTermsThisQuestion]
+      };
+    }
+
     function saveProgress() {
+      saveCurrentQuestionState();
       const data = {
         index,
+        furthestIndex,
         score,
         missed,
         streak,
-        answeredCorrectly,
-        missedThisQuestion,
-        wrongTermsThisQuestion,
-        currentChoiceTerms: currentChoices.map(v => v.term),
+        questionStates,
         choiceLogicVersion: CHOICE_LOGIC_VERSION,
         savedAt: new Date().toISOString()
       };
@@ -241,19 +254,30 @@
 
         deck = [...VOCAB];
         index = Math.min(Math.max(0, data.index), deck.length);
+        furthestIndex = typeof data.furthestIndex === 'number'
+          ? Math.min(Math.max(0, data.furthestIndex), deck.length)
+          : Math.min(Math.max(0, data.index), deck.length);
         score = Number(data.score) || 0;
         missed = Number(data.missed) || 0;
         streak = Number(data.streak) || 0;
-        answeredCorrectly = Boolean(data.answeredCorrectly);
-        missedThisQuestion = Boolean(data.missedThisQuestion);
-        wrongTermsThisQuestion = Array.isArray(data.wrongTermsThisQuestion) ? data.wrongTermsThisQuestion : [];
 
-        if (Array.isArray(data.currentChoiceTerms) && index < deck.length && data.choiceLogicVersion === CHOICE_LOGIC_VERSION) {
-          const byTerm = new Map(VOCAB.map(v => [v.term, v]));
-          currentChoices = data.currentChoiceTerms.map(term => byTerm.get(term)).filter(Boolean);
+        if (data.choiceLogicVersion === CHOICE_LOGIC_VERSION && data.questionStates && typeof data.questionStates === 'object') {
+          questionStates = data.questionStates;
         } else {
-          currentChoices = [];
+          questionStates = {};
         }
+
+        // Backwards compatibility for saves from the older version of this website.
+        if (!questionStates[index] && Array.isArray(data.currentChoiceTerms)) {
+          questionStates[index] = {
+            currentChoiceTerms: data.currentChoiceTerms,
+            answeredCorrectly: Boolean(data.answeredCorrectly),
+            missedThisQuestion: Boolean(data.missedThisQuestion),
+            wrongTermsThisQuestion: Array.isArray(data.wrongTermsThisQuestion) ? data.wrongTermsThisQuestion : []
+          };
+          if (data.answeredCorrectly) furthestIndex = Math.max(furthestIndex, index + 1);
+        }
+
         return true;
       } catch (err) {
         console.warn('Could not load saved progress:', err);
@@ -265,6 +289,7 @@
       if (clearSave) localStorage.removeItem(SAVE_KEY);
       deck = [...VOCAB];
       index = 0;
+      furthestIndex = 0;
       current = null;
       currentChoices = [];
       score = 0;
@@ -273,6 +298,7 @@
       answeredCorrectly = false;
       missedThisQuestion = false;
       wrongTermsThisQuestion = [];
+      questionStates = {};
       updateStats();
       loadQuestion();
       saveProgress();
@@ -310,6 +336,11 @@
       return shuffle([answer, ...wrong]);
     }
 
+    function termsToChoices(terms) {
+      const byTerm = new Map(VOCAB.map(v => [v.term, v]));
+      return terms.map(term => byTerm.get(term)).filter(Boolean);
+    }
+
     function loadQuestion() {
       if (index >= deck.length) {
         definitionEl.textContent = 'Finished! Restart to practice again.';
@@ -318,6 +349,7 @@
         reviewEl.innerHTML = '';
         feedbackEl.textContent = `Final score: ${score} correct, ${missed} missed questions.`;
         feedbackEl.className = 'feedback good';
+        backBtn.disabled = index <= 0;
         nextBtn.disabled = true;
         saveProgress();
         updateStats();
@@ -325,6 +357,25 @@
       }
 
       current = deck[index];
+      const savedState = questionStates[index];
+
+      if (savedState) {
+        currentChoices = Array.isArray(savedState.currentChoiceTerms) ? termsToChoices(savedState.currentChoiceTerms) : [];
+        answeredCorrectly = Boolean(savedState.answeredCorrectly);
+        missedThisQuestion = Boolean(savedState.missedThisQuestion);
+        wrongTermsThisQuestion = Array.isArray(savedState.wrongTermsThisQuestion) ? [...savedState.wrongTermsThisQuestion] : [];
+      } else {
+        currentChoices = [];
+        answeredCorrectly = false;
+        missedThisQuestion = false;
+        wrongTermsThisQuestion = [];
+      }
+
+      // If this is an older completed question without a saved state, show it as review-only.
+      if (index < furthestIndex && !savedState) {
+        answeredCorrectly = true;
+      }
+
       if (!currentChoices.length || !currentChoices.some(v => v.term === current.term)) {
         currentChoices = getChoices(current);
       }
@@ -335,7 +386,8 @@
       feedbackEl.className = answeredCorrectly ? 'feedback good' : (missedThisQuestion ? 'feedback bad' : 'feedback');
       definitionEl.textContent = current.definition;
       choicesEl.innerHTML = '';
-      nextBtn.disabled = !answeredCorrectly;
+      backBtn.disabled = index <= 0;
+      nextBtn.disabled = !(answeredCorrectly || index < furthestIndex);
 
       currentChoices.forEach((choice, i) => {
         const btn = document.createElement('button');
@@ -343,12 +395,12 @@
         if (wrongTermsThisQuestion.includes(choice.term)) btn.classList.add('wrong');
         if (answeredCorrectly && choice.term === current.term) btn.classList.add('correct');
         btn.innerHTML = `<span style="color: var(--muted); margin-right: 8px;">${i + 1}.</span> ${escapeHtml(choice.term)}`;
-        btn.disabled = answeredCorrectly || wrongTermsThisQuestion.includes(choice.term);
+        btn.disabled = answeredCorrectly || wrongTermsThisQuestion.includes(choice.term) || index < furthestIndex;
         btn.onclick = () => checkAnswer(btn, choice.term);
         choicesEl.appendChild(btn);
       });
 
-      if (answeredCorrectly) renderAnswerReview();
+      if (answeredCorrectly || index < furthestIndex) renderAnswerReview();
       else {
         reviewEl.classList.add('hidden');
         reviewEl.innerHTML = '';
@@ -359,12 +411,13 @@
     }
 
     function checkAnswer(button, selectedTerm) {
-      if (answeredCorrectly || !current) return;
+      if (answeredCorrectly || !current || index < furthestIndex) return;
 
       if (selectedTerm === current.term) {
         answeredCorrectly = true;
         score++;
         if (!missedThisQuestion) streak++;
+        furthestIndex = Math.max(furthestIndex, index + 1);
         button.classList.add('correct');
         feedbackEl.textContent = `Correct. The answer is ${current.term}.`;
         feedbackEl.className = 'feedback good';
@@ -403,17 +456,22 @@
       `;
     }
 
+    function backQuestion() {
+      if (index <= 0) return;
+      saveCurrentQuestionState();
+      index--;
+      loadQuestion();
+      saveProgress();
+    }
+
     function nextQuestion() {
-      if (!answeredCorrectly) {
+      if (!(answeredCorrectly || index < furthestIndex)) {
         feedbackEl.textContent = 'Get the correct answer first, then you can move on.';
         feedbackEl.className = 'feedback bad';
         return;
       }
+      saveCurrentQuestionState();
       if (index < deck.length) index++;
-      currentChoices = [];
-      answeredCorrectly = false;
-      missedThisQuestion = false;
-      wrongTermsThisQuestion = [];
       loadQuestion();
       saveProgress();
     }
@@ -425,7 +483,7 @@
       const currentNumber = deck.length ? Math.min(index + 1, deck.length) : 0;
       progressEl.textContent = `${currentNumber}/${deck.length}`;
       totalPill.textContent = `${VOCAB.length} words loaded`;
-      const percent = deck.length ? Math.min(100, (index / deck.length) * 100) : 0;
+      const percent = deck.length ? Math.min(100, (furthestIndex / deck.length) * 100) : 0;
       progressFillEl.style.width = `${percent}%`;
     }
 
@@ -448,6 +506,7 @@
       }[tag]));
     }
 
+    backBtn.onclick = backQuestion;
     nextBtn.onclick = nextQuestion;
     restartBtn.onclick = () => startGame({ clearSave: true });
     searchEl.addEventListener('input', e => renderList(e.target.value));
@@ -459,6 +518,7 @@
         if (btn) btn.click();
       }
       if (e.key === 'Enter') nextQuestion();
+      if (e.key === 'ArrowLeft') backQuestion();
     });
 
     renderList();
